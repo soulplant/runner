@@ -10,6 +10,16 @@ message HelloReply {
     string message = 1;
 }
 
+message RunRequest {
+    string command = 1;
+}
+
+message RunReply {
+    string error = 1;
+    string filename = 2;
+}
+
 service Greeter {
   rpc SayHello (HelloRequest) returns (HelloReply) {}
+  rpc Run (RunRequest) returns (stream RunReply) {}
 }
