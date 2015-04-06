@@ -19,7 +19,10 @@ import (
 var serverFlag = flag.Bool("server", false, "start the runner server")
 var commandFlag = flag.String("cmd", "", "command to execute")
 
-const prompt = "$ "
+const (
+	prompt = "$ "
+	port   = 1234
+)
 
 type server struct {
 	l       sync.Mutex
@@ -114,7 +117,7 @@ func main() {
 }
 
 func clientMain() {
-	conn, err := grpc.Dial("localhost:1234")
+	conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", port))
 	if err != nil {
 		log.Fatalf("dial: %s\n", err)
 	}
@@ -153,7 +156,7 @@ func clientMain() {
 }
 
 func serverMain() {
-	l, err := net.Listen("tcp", ":1234")
+	l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Fatalf("listen: %s\n", err)
 	}
