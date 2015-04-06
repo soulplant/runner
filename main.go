@@ -18,7 +18,7 @@ import (
 var serverFlag = flag.Bool("server", false, "start the runner server")
 var commandFlag = flag.String("cmd", "", "command to execute")
 
-const prompt = "$ "
+const prompt = "$"
 
 type server struct {
 	l       sync.Mutex
@@ -32,11 +32,15 @@ func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloRe
 }
 
 func (s *server) Run(req *pb.RunRequest, resp pb.Greeter_RunServer) error {
+	wasRunning := s.cancel()
 	f, err := ioutil.TempFile("", "runner-")
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s\n", req.Command)
+	if wasRunning {
+		fmt.Printf("<interrupted>\n")
+	}
+	fmt.Printf("%s %s\n", prompt, req.Command)
 	cmd := exec.Command("bash", "-c", req.Command)
 	writer := io.MultiWriter(f, os.Stdout)
 	cmd.Stdout = writer
@@ -46,35 +50,27 @@ func (s *server) Run(req *pb.RunRequest, resp pb.Greeter_RunServer) error {
 		return err
 	}
 	resp.Send(&pb.RunReply{Filename: f.Name()})
-	fmt.Printf(prompt)
 	return nil
 }
 
-func (s *server) start(cmd *exec.Cmd) error {
+func (s *server) cancel() bool {
 	s.l.Lock()
 	defer s.l.Unlock()
 	if s.running != nil {
 		s.running.Process.Kill()
 		s.running = nil
+		return true
 	}
+	return false
+}
+
+func (s *server) start(cmd *exec.Cmd) error {
 	err := cmd.Start()
 	if err != nil {
 		return err
 	}
 	s.running = cmd
 	return nil
-}
-
-func writeSync(f *os.File, text string) {
-	var written int
-	for written < len(text) {
-		n, err := f.Write([]byte(text[written:]))
-		if err != nil {
-			return
-		}
-		log.Printf("wrote %d byte(s)\n", n)
-		written += n
-	}
 }
 
 func main() {
@@ -123,6 +119,5 @@ func serverMain() {
 	}
 	s := grpc.NewServer()
 	pb.RegisterGreeterServer(s, &server{})
-	fmt.Printf(prompt)
 	s.Serve(l)
 }
