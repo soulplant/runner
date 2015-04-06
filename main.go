@@ -18,7 +18,7 @@ import (
 var serverFlag = flag.Bool("server", false, "start the runner server")
 var commandFlag = flag.String("cmd", "", "command to execute")
 
-const prompt = "$"
+const prompt = "$ "
 
 type server struct {
 	l       sync.Mutex
@@ -31,16 +31,19 @@ func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloRe
 	}, nil
 }
 
+func (s *server) printPrompt() {
+	fmt.Printf("%s", prompt)
+}
+
 func (s *server) Run(req *pb.RunRequest, resp pb.Greeter_RunServer) error {
-	wasRunning := s.cancel()
+	if s.cancel() {
+		fmt.Printf("<interrupted>\n")
+	}
 	f, err := ioutil.TempFile("", "runner-")
 	if err != nil {
 		return err
 	}
-	if wasRunning {
-		fmt.Printf("<interrupted>\n")
-	}
-	fmt.Printf("%s %s\n", prompt, req.Command)
+	fmt.Printf("%s\n", req.Command)
 	cmd := exec.Command("bash", "-c", req.Command)
 	writer := io.MultiWriter(f, os.Stdout)
 	cmd.Stdout = writer
@@ -49,6 +52,10 @@ func (s *server) Run(req *pb.RunRequest, resp pb.Greeter_RunServer) error {
 	if err != nil {
 		return err
 	}
+	go func() {
+		cmd.Process.Wait()
+		s.cancel()
+	}()
 	resp.Send(&pb.RunReply{Filename: f.Name()})
 	return nil
 }
@@ -59,6 +66,7 @@ func (s *server) cancel() bool {
 	if s.running != nil {
 		s.running.Process.Kill()
 		s.running = nil
+		s.printPrompt()
 		return true
 	}
 	return false
@@ -118,6 +126,8 @@ func serverMain() {
 		log.Fatalf("listen: %s\n", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterGreeterServer(s, &server{})
+	serv := &server{}
+	serv.printPrompt()
+	pb.RegisterGreeterServer(s, serv)
 	s.Serve(l)
 }
