@@ -19,7 +19,15 @@ message RunReply {
     string filename = 2;
 }
 
+message ListRequest {
+}
+
+message ListReply {
+    repeated string command = 1;
+}
+
 service Greeter {
   rpc SayHello (HelloRequest) returns (HelloReply) {}
   rpc Run (RunRequest) returns (stream RunReply) {}
+  rpc List (ListRequest) returns (ListReply) {}
 }

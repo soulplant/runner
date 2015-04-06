@@ -12,6 +12,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 )
 
@@ -38,6 +39,7 @@ func (s *server) printPrompt() {
 func (s *server) Run(req *pb.RunRequest, resp pb.Greeter_RunServer) error {
 	if s.cancel() {
 		fmt.Printf("<interrupted>\n")
+		s.printPrompt()
 	}
 	f, err := ioutil.TempFile("", "runner-")
 	if err != nil {
@@ -54,10 +56,30 @@ func (s *server) Run(req *pb.RunRequest, resp pb.Greeter_RunServer) error {
 	}
 	go func() {
 		cmd.Process.Wait()
-		s.cancel()
+		if s.cancel() {
+			s.printPrompt()
+		}
 	}()
 	resp.Send(&pb.RunReply{Filename: f.Name()})
 	return nil
+}
+
+func (s *server) List(ctx context.Context, req *pb.ListRequest) (*pb.ListReply, error) {
+	commands := s.getRunningCommands()
+	return &pb.ListReply{
+		Command: commands,
+	}, nil
+}
+
+func (s *server) getRunningCommands() []string {
+	s.l.Lock()
+	defer s.l.Unlock()
+	result := []string{}
+	if s.running != nil {
+		cmd := strings.Join(s.running.Args[2:], " ")
+		result = append(result, cmd)
+	}
+	return result
 }
 
 func (s *server) cancel() bool {
@@ -66,7 +88,6 @@ func (s *server) cancel() bool {
 	if s.running != nil {
 		s.running.Process.Kill()
 		s.running = nil
-		s.printPrompt()
 		return true
 	}
 	return false
@@ -96,8 +117,17 @@ func clientMain() {
 		log.Fatalf("dial: %s\n", err)
 	}
 	client := pb.NewGreeterClient(conn)
-	if commandFlag == nil {
-		log.Fatalf("cmd argument required\n")
+	ctx := context.Background()
+	if *commandFlag == "" {
+		reply, err := client.List(ctx, &pb.ListRequest{})
+		if err != nil {
+			log.Fatalf("couldn't list jobs: %s\n", err)
+		}
+		fmt.Printf("%d jobs running\n", len(reply.Command))
+		for _, cmd := range reply.Command {
+			fmt.Printf("> %s\n", cmd)
+		}
+		return
 	}
 	c, err := client.Run(context.Background(), &pb.RunRequest{*commandFlag})
 	if err != nil {
