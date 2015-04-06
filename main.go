@@ -94,6 +94,8 @@ func (s *server) cancel() bool {
 }
 
 func (s *server) start(cmd *exec.Cmd) error {
+	s.l.Lock()
+	defer s.l.Unlock()
 	err := cmd.Start()
 	if err != nil {
 		return err
