@@ -31,14 +31,14 @@ func (s *server) printPrompt() {
 	fmt.Printf("%s", prompt)
 }
 
-func (s *server) Run(req *pb.RunRequest, resp pb.Greeter_RunServer) error {
+func (s *server) Run(ctx context.Context, req *pb.RunRequest) (*pb.RunReply, error) {
 	if s.cancel() {
 		fmt.Printf("<interrupted>\n")
 		s.printPrompt()
 	}
 	f, err := ioutil.TempFile("", "runner-")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	fmt.Printf("%s\n", req.Command)
 	cmd := exec.Command("bash", "-c", req.Command)
@@ -47,7 +47,7 @@ func (s *server) Run(req *pb.RunRequest, resp pb.Greeter_RunServer) error {
 	cmd.Stderr = writer
 	err = s.start(cmd)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	go func() {
 		cmd.Process.Wait()
@@ -55,8 +55,7 @@ func (s *server) Run(req *pb.RunRequest, resp pb.Greeter_RunServer) error {
 			s.printPrompt()
 		}
 	}()
-	resp.Send(&pb.RunReply{Filename: f.Name()})
-	return nil
+	return &pb.RunReply{Filename: f.Name()}, nil
 }
 
 func (s *server) List(ctx context.Context, req *pb.ListRequest) (*pb.ListReply, error) {

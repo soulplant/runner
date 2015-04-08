@@ -28,6 +28,6 @@ message ListReply {
 
 service Greeter {
   rpc SayHello (HelloRequest) returns (HelloReply) {}
-  rpc Run (RunRequest) returns (stream RunReply) {}
+  rpc Run (RunRequest) returns (RunReply) {}
   rpc List (ListRequest) returns (ListReply) {}
 }

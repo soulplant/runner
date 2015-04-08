@@ -6,7 +6,6 @@ import (
 	pb "github.com/soulplant/runner/proto"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	"io"
 	"log"
 	"net"
 )
@@ -44,25 +43,15 @@ func clientMain() {
 		}
 		return
 	}
-	c, err := client.Run(context.Background(), &pb.RunRequest{*commandFlag})
+	reply, err := client.Run(context.Background(), &pb.RunRequest{*commandFlag})
 	if err != nil {
 		log.Fatalf("call: %s\n", err)
 	}
-	for {
-		reply, err := c.Recv()
-		if err == io.EOF {
-			return
-		}
-		if err != nil {
-			fmt.Printf("error: %s\n", err)
-			return
-		}
-		if reply.Error != "" {
-			fmt.Printf("error: %s\n", err)
-			return
-		}
-		fmt.Printf("command output in %s\n", reply.Filename)
+	if reply.Error != "" {
+		fmt.Printf("error: %s\n", err)
+		return
 	}
+	fmt.Printf("command output in %s\n", reply.Filename)
 }
 
 func serverMain() {
