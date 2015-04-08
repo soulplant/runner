@@ -49,6 +49,8 @@ func (s *server) Run(ctx context.Context, req *pb.RunRequest) (*pb.RunReply, err
 			s.printPrompt()
 		}
 	}()
+	// TODO(koz): Don't leak this file, rather associate it with the running
+	// process and close it when the process terminates.
 	return &pb.RunReply{Filename: f.Name()}, nil
 }
 
