@@ -7,11 +7,11 @@ import (
 )
 
 type Task struct {
-	name string
-	cmds []string
+	Name string
+	Cmds []string
 }
 
-func parseFile(filename string) ([]Task, error) {
+func ParseFile(filename string) ([]Task, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err

@@ -34,8 +34,9 @@ func (s *server) Run(ctx context.Context, req *pb.RunRequest) (*pb.RunReply, err
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("%s\n", req.Command)
-	cmd := exec.Command("bash", "-c", req.Command)
+	commandString := strings.Join(req.Command, " && ")
+	fmt.Printf("%s\n", commandString)
+	cmd := exec.Command("bash", "-c", commandString)
 	writer := io.MultiWriter(f, os.Stdout)
 	cmd.Stdout = writer
 	cmd.Stderr = writer

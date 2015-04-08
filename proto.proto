@@ -3,7 +3,8 @@ syntax = "proto3";
 package proto;
 
 message RunRequest {
-    string command = 1;
+    repeated string command = 1;
+    string name = 2;
 }
 
 message RunReply {
