@@ -21,12 +21,6 @@ type server struct {
 	running *exec.Cmd
 }
 
-func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloReply, error) {
-	return &pb.HelloReply{
-		Message: fmt.Sprintf("Hello, %s\n", in.Name),
-	}, nil
-}
-
 func (s *server) printPrompt() {
 	fmt.Printf("%s", prompt)
 }
